@@ -26,3 +26,14 @@ function xor(a, b) {
         return 1;
     });
 }
+
+function addZeros(str, amount) {
+    let offset = str.split().size() % amount;
+
+    while (offset > 0) {
+        str = '0' + str;
+        offset--;
+    }
+
+    return str;
+}
