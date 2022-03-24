@@ -61,13 +61,25 @@ function test() {
     let sboxArr = [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
     let result = x;
 
-    for (var i = 0; i < 4; i++) {
-        const key = getRoundKey(k, i, x.length);
-        result = xor(result, key);
+    let key = getRoundKey(k, 0, x.length);
+    console.log('Schlüssel 0', key);
+    result = xor(result, key);
+    console.log('Nach XOR', result);
+
+    for (var i = 1; i < 4; i++) {
         result = sbox(result, sboxArr);
-        if (i < 3) result = bitPermutation(result, bitPermutationArr);
-        console.log(result);
+        console.log('Nach SBox', result);
+        result = bitPermutation(result, bitPermutationArr);
+        console.log('Nach Bitpermutation', result);
+        key = getRoundKey(k, i, x.length);
+        console.log('Rundenschlüssel', key);
+        result = xor(result, key);
+        console.log('Nach XOR', result, 'Runde ', i);
     }
+
+    result = sbox(result, sboxArr);
+    key = getRoundKey(k, 4, x.length);
+    result = xor(result, key);
 
     console.log(result, y == result, y);
 }
