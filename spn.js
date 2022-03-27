@@ -42,15 +42,29 @@ function bitPermutation(str, permMap) {
     }).join('');
 }
 
-function sbox(str, box, oppositeDirection = false) {
+function sbox(str, box) {
     return splitInSections(str, 4).map(o => {
-        // console.log(str, o, box, ('0000' + box[parseInt(o, 2)].toString(2)).slice(-4));
         return ('0000' + box[parseInt(o, 2)].toString(2)).slice(-4);
     }).join('');
 }
 
 function splitInSections(str, sectionSize) {
     return str.match(new RegExp('.{1,' + sectionSize + '}', 'g'));
+}
+
+function inverseSBox(sbox, bitPermutationArr) {
+    const sBoxReversed = sbox.reverse();
+    const inverseBox = [];
+
+    inverseBox.push(...sBoxReversed.map((element, index) => {
+        if (index == 0 || index == sBoxReversed.length - 1) {
+            return element;
+        } else {
+            return sBoxReversed[bitPermutationArr[index]];
+        }
+    }));
+
+    return inverseBox;
 }
 
 function test() {
@@ -82,6 +96,15 @@ function test() {
     result = xor(result, key);
 
     console.log(result, y == result, y);
+}
+
+function testInverseBox() {
+    let bitPermutationArr =    [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
+    let sboxArr = [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
+
+    const inverseBox = inverseSBox(sboxArr, bitPermutationArr);
+
+    console.log(inverseBox);
 }
 
 function getRoundKey(key, round, keysize) {
