@@ -1,20 +1,49 @@
-function runSpn() {
-    let r = 4;
-    let n = 4;
-    let m = 4;
-    let sbox =              [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
-    let bitPermutation =    [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
-    let s = 32;
-    let k = "00111010100101001101011000111111";
-    let message = "00000100110100100000101110111000000000101000111110001110011111110110000001010001010000111010000000010011011001110010101110110000";
+const sboxArr =              [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
+const bitPermutationArr =    [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
+const r = 4;
+const n = 4;
+const m = 4;
+const k = "00111010100101001101011000111111";
+const s = k.length
 
-    let messageSplits = splitInSections(message, n * m);
-    let firstSplit = messageSplits[0];
-    let result = "";
+function test() {
+    let x = '0001001010001111';
+    let k = '00010001001010001000110000000000';
+    let y = '1010111010110100';
+    let bitPermutationArr =    [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
+    let sboxArr = [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
+    let result = x;
 
-    messageSplits.slice(1).forEach(split => {
-        result += xor(firstSplit, split);
-    });
+    let key = getRoundKey(k, 0, x.length);
+    console.log('Schlüssel 0', key);
+    result = xor(result, key);
+    console.log('Nach XOR', result);
+
+    for (var i = 1; i < 4; i++) {
+        result = sbox(result, sboxArr);
+        console.log('Nach SBox', result);
+        result = bitPermutation(result, bitPermutationArr);
+        console.log('Nach Bitpermutation', result);
+        key = getRoundKey(k, i, x.length);
+        console.log('Rundenschlüssel', key);
+        result = xor(result, key);
+        console.log('Nach XOR', result, 'Runde ', i);
+    }
+
+    result = sbox(result, sboxArr);
+    key = getRoundKey(k, 4, x.length);
+    result = xor(result, key);
+
+    console.log(result, y == result, y);
+}
+
+function testInverseBox() {
+    let bitPermutationArr =    [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
+    let sboxArr = [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
+
+    const inverseBox = inverseSBox(sboxArr, bitPermutationArr);
+
+    console.log(inverseBox);
 }
 
 function xor(a, b) {
@@ -67,46 +96,59 @@ function inverseSBox(sbox, bitPermutationArr) {
     return inverseBox;
 }
 
-function test() {
-    let x = '0001001010001111';
-    let k = '00010001001010001000110000000000';
-    let y = '1010111010110100';
-    let bitPermutationArr =    [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
-    let sboxArr = [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
-    let result = x;
+function runSPN(text, key, encode = true) {
+    let roundKey = getRoundKey(key, 0, text.length, encode);
+    let result = text;
+    let sBox;
 
-    let key = getRoundKey(k, 0, x.length);
-    console.log('Schlüssel 0', key);
-    result = xor(result, key);
-    console.log('Nach XOR', result);
+    if (encode) {
+        // bei Verschlüsselung wird die sBox 1-zu-1 übernommen
+        sBox = sboxArr;
+    } else {
+        // bei Entschlüsselung muss das Inverse der sBox verwendet werden
+        sBox = inverseSBox(sboxArr)
+    }
 
-    for (var i = 1; i < 4; i++) {
-        result = sbox(result, sboxArr);
-        console.log('Nach SBox', result);
+    result = xor(result, roundKey);
+
+    for (var i = 1; i < r; i++) {
+        result = sbox(result, sBox);
         result = bitPermutation(result, bitPermutationArr);
-        console.log('Nach Bitpermutation', result);
-        key = getRoundKey(k, i, x.length);
-        console.log('Rundenschlüssel', key);
-        result = xor(result, key);
-        console.log('Nach XOR', result, 'Runde ', i);
+        roundKey = getRoundKey(key, i, text.length, encode);
+        result = xor(result, roundKey);
     }
 
     result = sbox(result, sboxArr);
-    key = getRoundKey(k, 4, x.length);
-    result = xor(result, key);
+    roundKey = getRoundKey(key, r, text.length);
+    result = xor(result, roundKey);
 
-    console.log(result, y == result, y);
+    return result;
 }
 
-function testInverseBox() {
-    let bitPermutationArr =    [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
-    let sboxArr = [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7];
-
-    const inverseBox = inverseSBox(sboxArr, bitPermutationArr);
-
-    console.log(inverseBox);
+function getRoundKey(key, round, keysize, encode = true) {
+    let roundKey = key.substr(4 * round, keysize);
+    if (encode) {
+        // bei Verschlüsselung wird der Runden-Schlüssel unverändert zurückgegeben
+        return roundKey;
+    } else {
+        // bei Entschlüsselung wird der Runden-Schlüssel mittels Bit-Permutation angepasst
+        return bitPermutation(roundKey, bitPermutationArr);
+    }
 }
 
-function getRoundKey(key, round, keysize) {
-    return key.substr(4 * round, keysize);
+function decodeCTR(y, key) {
+    splittedY = splitInSections(y, n*m)
+
+    // shift() gibt das erste Element zurück und entfernt es aus dem Array
+    prevY = splittedY.shift()   // y-1
+
+    // einzelne Teil-Texte entschlüsseln und zurückgeben
+    return splittedY.map((yi, i) => {
+        //Parameter berechnen
+        text = (prevY + i) % Math.pow(2, 16);
+        //mit SPN entschlüsseln
+        spn = runSPN(text, k, false);
+        //XOR mit aktuellem Chiffretext
+        return xor(spn, yi);
+    })
 }
